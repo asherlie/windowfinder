@@ -29,4 +29,10 @@ int main() {
 
     printf("%i total windows\n", nchildren);
 
+    char* wn;
+    for (int i = 0; i < nchildren; ++i) {
+        XFetchName(d, children[i], &wn);
+        if (wn) printf("%i: %s\n", i, wn);
+    }
+
 }
