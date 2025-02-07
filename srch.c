@@ -2,25 +2,22 @@
 #include <stdio.h>
 
 /*
- * Display > Screen > Window
- *
+ * Display > Screen > Windows
  */
+
 int main() {
-    /*Client* c = m->clients;*/
     Display *d;
     Screen* scr;
-    XWindowAttributes wa;
+    int s;
 
     printf("Attempting to open %s\n", XDisplayName(NULL));
 	d = XOpenDisplay(NULL);
     if (!d) {
         printf("Failed to open %s\n", XDisplayName(NULL));
     }
-    int s = DefaultScreen(d);
-    /*printf("nscreens: %i\n", DisplayWidth(d, s));*/
+    s = DefaultScreen(d);
     scr = ScreenOfDisplay(d, s);
-    printf("rd: %i\n", scr->root);
-    int w = RootWindowOfScreen(scr);
+
     Window rw, parent;
     Window* children;
     int nchildren;
