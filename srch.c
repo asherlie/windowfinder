@@ -81,16 +81,12 @@ void search_windows(Display* d, Screen* scr, char* sterm) {
     pth = malloc(nchildren * sizeof(pthread_t));
 
     char* wn;
-    /*struct loc_win_arg wa = {.d = d, .color = get_rgb_ul(255, 0, 0), .original_color = get_rgb_ul(0, 0, 0),*/
-                             /*.n_flashes = 10, .flash_duration = 200000};*/
-
     struct loc_win_arg wa[nchildren];
     memset(wa, 0, sizeof(struct loc_win_arg) * nchildren);
 
     for (uint32_t i = 0; i < nchildren; ++i) {
         XFetchName(d, children[i], &wn);
         if (wn && (!sterm || strcasestr(wn, sterm))) {
-            /*Pixmap p;*/
             if (sterm) {
                 wa[i].d = d;
                 wa[i].w = children[i];
@@ -110,8 +106,6 @@ void search_windows(Display* d, Screen* scr, char* sterm) {
         }
     }
     free(pth);
-
-    /*locate_window(d, children[i], get_rgb_ul(255, 0, 0), get_rgb_ul(0, 0, 0), 10, 200000);*/
 }
 
 int main(int argc, char** argv) {
