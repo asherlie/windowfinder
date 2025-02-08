@@ -1,12 +1,23 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <pthread.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
 /*
  * Display > Screen > Windows
  */
+
+struct loc_win_arg{
+    Display* d;
+    Window w;
+    unsigned long color;
+    unsigned long original_color;
+    uint32_t n_flashes;
+    uint32_t flash_duration_us;
+};
 
 unsigned long get_rgb_ul (uint8_t r, uint8_t g, uint8_t b) {
     unsigned long ret = (r << 16) | (g << 8) | b;
@@ -23,6 +34,7 @@ unsigned long get_rgb_ul (uint8_t r, uint8_t g, uint8_t b) {
 
 
 void locate_window(Display* d, Window w, unsigned long color, unsigned long original_color,  uint32_t n_flashes, uint32_t flash_duration_us) {
+    printf("locating windonw %li of %p\n", w, (void*)d);
     XWindowAttributes wa;
     XWindowChanges wc;
 
@@ -40,10 +52,10 @@ void locate_window(Display* d, Window w, unsigned long color, unsigned long orig
 
     for (uint32_t i = 0; i < n_flashes; ++i) {
         XSetWindowBorder(d, w, color);
-        XSync(d, 1);
+        XSync(d, 0);
         usleep(flash_duration_us);
         XSetWindowBorder(d, w, original_color);
-        XSync(d, 1);
+        XSync(d, 0);
         usleep(flash_duration_us);
     }
 
@@ -52,24 +64,54 @@ void locate_window(Display* d, Window w, unsigned long color, unsigned long orig
     XSync(d, 0);
 }
 
+void* loc_win_pth(void* varg) {
+    struct loc_win_arg* wa = varg;
+
+    locate_window(wa->d, wa->w, wa->color, wa->original_color, wa->n_flashes, wa->flash_duration_us);
+    return NULL;
+}
+
 void search_windows(Display* d, Screen* scr, char* sterm) {
     Window rw, parent;
     Window* children;
     uint32_t nchildren;
+    pthread_t* pth;
 
     XQueryTree(d, RootWindowOfScreen(scr), &rw, &parent, &children, &nchildren);
+    pth = malloc(nchildren * sizeof(pthread_t));
 
     char* wn;
+    /*struct loc_win_arg wa = {.d = d, .color = get_rgb_ul(255, 0, 0), .original_color = get_rgb_ul(0, 0, 0),*/
+                             /*.n_flashes = 10, .flash_duration = 200000};*/
+
+    struct loc_win_arg wa[nchildren];
+    memset(wa, 0, sizeof(struct loc_win_arg) * nchildren);
+
     for (uint32_t i = 0; i < nchildren; ++i) {
         XFetchName(d, children[i], &wn);
         if (wn && (!sterm || strcasestr(wn, sterm))) {
             /*Pixmap p;*/
             if (sterm) {
-                locate_window(d, children[i], get_rgb_ul(255, 0, 0), get_rgb_ul(0, 0, 0), 10, 200000);
+                wa[i].d = d;
+                wa[i].w = children[i];
+                wa[i].color = get_rgb_ul(255, 0, 0);
+                wa[i].original_color = get_rgb_ul(0, 0, 0);
+                wa[i].n_flashes = 10;
+                wa[i].flash_duration_us = 200000;
+                pthread_create(pth + i, NULL, loc_win_pth, &wa[i]);
             }
             printf("\"%s\"\n", wn);
         }
     }
+
+    for (uint32_t i = 0; i < nchildren; ++i) {
+        if (wa[i].d == d) {
+            pthread_join(pth[i], NULL);
+        }
+    }
+    free(pth);
+
+    /*locate_window(d, children[i], get_rgb_ul(255, 0, 0), get_rgb_ul(0, 0, 0), 10, 200000);*/
 }
 
 int main(int argc, char** argv) {
