@@ -1,4 +1,6 @@
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
@@ -60,6 +62,7 @@ void locate_window(Display* d, Window w, unsigned long color, unsigned long orig
     }
 
 	wc.border_width = wa.border_width;
+    printf("resetting to %i\n", wc.border_width);
     XConfigureWindow(d, w, CWBorderWidth, &wc);
     XSync(d, 0);
 }
@@ -84,8 +87,16 @@ void search_windows(Display* d, Screen* scr, char* sterm) {
     struct loc_win_arg wa[nchildren];
     memset(wa, 0, sizeof(struct loc_win_arg) * nchildren);
 
+    XTextProperty xtp;
+
     for (uint32_t i = 0; i < nchildren; ++i) {
         XFetchName(d, children[i], &wn);
+        XGetTextProperty(d, children[i], &xtp, XA_WM_COMMAND);
+        printf("%li\n", xtp.nitems);
+        if (xtp.nitems) {
+            printf("CMD: %s\n", xtp.value);
+        }
+
         if (wn && (!sterm || strcasestr(wn, sterm))) {
             if (sterm) {
                 wa[i].d = d;
