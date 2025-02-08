@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <string.h>
 
 /*
@@ -12,8 +13,28 @@ unsigned long get_rgb_ul (uint8_t r, uint8_t g, uint8_t b) {
     return ret;
 }
 
-void locate_window(Display* d, Window* w, unsigned long color, uint16_t flash_duration, uint8_t n_secs) {
-    XSetWindowBorder(d, w, color, );
+/*
+ * duration is 1000000 // 1 sec
+ * n_secs   is 3000000
+ * 
+ * how many flashes will we have:
+ *     3
+*/
+
+
+uint16_t locate_window(Display* d, Window w, unsigned long color, uint32_t flash_duration_us, uint32_t n_usecs) {
+    uint16_t n_flashes = 0;
+    XWindowAttributes wa;
+
+    // TODO: update border width, i'll prob have to use set attribute instead of xsetwindowborder
+    XGetWindowAttributes(d, w, &wa);
+
+    for (int i = 0; i < (n_usecs / flash_duration_us); ++i) {
+        XSetWindowBorder(d, w, color);
+        usleep(flash_duration_us);
+        ++n_flashes;
+    }
+    return n_flashes;
 }
 
 void search_windows(Display* d, Screen* scr, char* sterm) {
@@ -29,7 +50,7 @@ void search_windows(Display* d, Screen* scr, char* sterm) {
         if (wn && (!sterm || strcasestr(wn, sterm))) {
             Pixmap p;
             if (sterm) {
-                locate_window(d, children[i], get_rgb_ul(255, 0, 0));
+                locate_window(d, children[i], get_rgb_ul(255, 0, 0), 1000000, 5000000);
             }
             printf("\"%s\"\n", wn);
         }
