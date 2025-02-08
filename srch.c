@@ -22,35 +22,44 @@ unsigned long get_rgb_ul (uint8_t r, uint8_t g, uint8_t b) {
 */
 
 
-uint16_t locate_window(Display* d, Window w, unsigned long color, uint32_t flash_duration_us, uint32_t n_usecs) {
-    uint16_t n_flashes = 0;
-    XWindowAttributes wa;
+void locate_window(Display* d, Window w, unsigned long color, unsigned long original_color,  uint32_t n_flashes, uint32_t flash_duration_us) {
+    /*XWindowAttributes wa;*/
 
     // TODO: update border width, i'll prob have to use set attribute instead of xsetwindowborder
-    XGetWindowAttributes(d, w, &wa);
+    /*XGetWindowAttributes(d, w, &wa);*/
+    /*printf("%i\n", wa.border_pixel);*/
+    // TODO: find a way to get original border pixel value, it's not contained in window attributes. 
+    // setting to black for now
 
-    for (int i = 0; i < (n_usecs / flash_duration_us); ++i) {
+        /*printf("%i\n", XSetWindowBorder(d, w, color));*/
+        /*return 0;*/
+    for (uint32_t i = 0; i < n_flashes; ++i) {
         XSetWindowBorder(d, w, color);
+        /*puts("FLASH RED");*/
+        /*for (int j = 0; j < 30000000; ++j) ;*/
+        XSync(d, 1);
         usleep(flash_duration_us);
-        ++n_flashes;
+        /*puts("FLASH BLK");*/
+        XSetWindowBorder(d, w, original_color);
+        XSync(d, 1);
+        usleep(flash_duration_us);
     }
-    return n_flashes;
 }
 
 void search_windows(Display* d, Screen* scr, char* sterm) {
     Window rw, parent;
     Window* children;
-    int nchildren;
+    uint32_t nchildren;
 
     XQueryTree(d, RootWindowOfScreen(scr), &rw, &parent, &children, &nchildren);
 
     char* wn;
-    for (int i = 0; i < nchildren; ++i) {
+    for (uint32_t i = 0; i < nchildren; ++i) {
         XFetchName(d, children[i], &wn);
         if (wn && (!sterm || strcasestr(wn, sterm))) {
-            Pixmap p;
+            /*Pixmap p;*/
             if (sterm) {
-                locate_window(d, children[i], get_rgb_ul(255, 0, 0), 1000000, 5000000);
+                locate_window(d, children[i], get_rgb_ul(255, 0, 0), get_rgb_ul(0, 0, 0), 15, 200000);
             }
             printf("\"%s\"\n", wn);
         }
